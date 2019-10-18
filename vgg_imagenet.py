@@ -19,6 +19,8 @@
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
+import pdb
+
 cfg = { 
     'A': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
     'B': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
@@ -57,6 +59,7 @@ class VGG(nn.Module):
             self._initialize_weights()
 
     def forward(self, x):
+        pdb.set_trace() 
         x  = self.organize_features(x)
         x = x.view(x.size(0), -1)
         x = self.classifier(x)

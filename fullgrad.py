@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from math import isclose
-
+import pdb
 
 def linearity_test(m):
     # Find out if a given layer is linear or not
@@ -42,10 +42,12 @@ class FullGrad():
     Compute FullGrad saliency map and full gradient decomposition 
     """
 
-    def __init__(self, model, im_size = (3,224,224) ):
+    def __init__(self, model, device, im_size = (3,224,224) ):
         self.model = model
         self.im_size = (1,) + im_size
+        self.device = device
         self.blockwise_biases = self._getBiases()
+        pdb.set_trace()
         self.checkCompleteness()
 
     def _getBiases(self):
@@ -58,6 +60,7 @@ class FullGrad():
 
         self.model.eval()
         input_bias = torch.zeros(self.im_size) 
+        input_bias = input_bias.to(self.device)
         lin_block = 0
         blockwise_biases = [0]
 
@@ -99,7 +102,7 @@ class FullGrad():
 
         #Random input image
         input = torch.randn(self.im_size)
-
+        input = input.to(self.device)
         # Get raw outputs
         self.model.eval()
         raw_output = self.model(input)
@@ -137,13 +140,14 @@ class FullGrad():
 
                 if isinstance(m, nn.Linear):
                     feature = feature.view(feature.size(0),-1)
-
+                pdb.set_trace()
                 feature = m(feature)
             elif linearity_test(m) == 'nonlinear':
                 # check previous module was linear 
                 if lin_block:
                     blockwise_features.append(feature)
                 lin_block = 0
+                feature = feature.to('cuda')
                 feature = m(feature)
 
         if lin_block:
@@ -193,8 +197,7 @@ class FullGrad():
         return input
 
     def saliency(self, image, target_class=None):
-        #FullGrad saliency
-        
+        #FullGrad saliy  
         self.model.eval()
         input_grad, bias_grad = self.fullGradientDecompose(image, target_class=target_class)
         

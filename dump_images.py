@@ -18,6 +18,7 @@ from fullgrad import FullGrad
 from simple_fullgrad import SimpleFullGrad
 from vgg_imagenet import *
 from misc_functions import *
+import pdb
 
 # PATH variables
 PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
@@ -42,10 +43,10 @@ unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
                            std = [0.229, 0.224, 0.225])
 
 
-model = vgg16_bn(pretrained=True)
- 
+model = vgg19_bn(pretrained=True)
+model = model.to(device) 
 # Initialize FullGrad object
-fullgrad = FullGrad(model)
+fullgrad = FullGrad(model, device)
 simple_fullgrad = SimpleFullGrad(model)
 
 save_path = PATH + 'results/'
@@ -55,7 +56,9 @@ def compute_saliency_and_save():
         data, target = data.to(device).requires_grad_(), target.to(device)
 
         # Compute saliency maps for the input data
+        pdb.set_trace()
         cam = fullgrad.saliency(data)
+        
         cam_simple = simple_fullgrad.saliency(data)
 
         # Save saliency maps
@@ -72,6 +75,8 @@ def compute_saliency_and_save():
 
 # Create folder to saliency maps
 create_folder(save_path)
+
+pdb.set_trace()
 
 compute_saliency_and_save()
 
