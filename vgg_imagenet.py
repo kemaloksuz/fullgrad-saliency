@@ -58,8 +58,7 @@ class VGG(nn.Module):
         if init_weights:
             self._initialize_weights()
 
-    def forward(self, x):
-        pdb.set_trace() 
+    def forward(self, x): 
         x  = self.organize_features(x)
         x = x.view(x.size(0), -1)
         x = self.classifier(x)

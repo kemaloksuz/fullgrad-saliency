@@ -43,7 +43,7 @@ unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
                            std = [0.229, 0.224, 0.225])
 
 
-model = vgg19_bn(pretrained=True)
+model = vgg16_bn(pretrained=True)
 model = model.to(device) 
 # Initialize FullGrad object
 fullgrad = FullGrad(model, device)
@@ -56,7 +56,6 @@ def compute_saliency_and_save():
         data, target = data.to(device).requires_grad_(), target.to(device)
 
         # Compute saliency maps for the input data
-        pdb.set_trace()
         cam = fullgrad.saliency(data)
         
         cam_simple = simple_fullgrad.saliency(data)
@@ -75,8 +74,6 @@ def compute_saliency_and_save():
 
 # Create folder to saliency maps
 create_folder(save_path)
-
-pdb.set_trace()
 
 compute_saliency_and_save()
 

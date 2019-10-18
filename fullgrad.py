@@ -47,7 +47,6 @@ class FullGrad():
         self.im_size = (1,) + im_size
         self.device = device
         self.blockwise_biases = self._getBiases()
-        pdb.set_trace()
         self.checkCompleteness()
 
     def _getBiases(self):
@@ -140,7 +139,6 @@ class FullGrad():
 
                 if isinstance(m, nn.Linear):
                     feature = feature.view(feature.size(0),-1)
-                pdb.set_trace()
                 feature = m(feature)
             elif linearity_test(m) == 'nonlinear':
                 # check previous module was linear 
