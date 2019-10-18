@@ -163,10 +163,11 @@ class FullGrad():
 
         image = image.requires_grad_()
         out, features = self._getFeatures(image)
-
+    
         if target_class is None:
             target_class = out.data.max(1, keepdim=True)[1]
 
+        print("Saliency Map is Calculated for Class: {}\n".format(target_class))    
         agg = 0
         for i in range(image.size(0)):
             agg += out[i,target_class[i]]
