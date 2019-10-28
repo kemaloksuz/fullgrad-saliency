@@ -50,6 +50,7 @@ model = model.to(device)
 # Initialize FullGrad object
 fullgrad = FullGrad(model, device)
 simple_fullgrad = SimpleFullGrad(model)
+target_class=torch.tensor([[852]]).to(device)
 
 save_path = PATH + 'results/'
 
@@ -58,13 +59,13 @@ def compute_saliency_and_save():
         data, target = data.to(device).requires_grad_(), target.to(device)
 
         # Compute saliency maps for the input data
-        cam = fullgrad.saliency(data, target_class = None)
+        cam = fullgrad.saliency(data, target_class = target_class)
         
-        cam_simple = simple_fullgrad.saliency(data)
+        cam_simple = simple_fullgrad.saliency(data, target_class = target_class)
 
         # Save saliency maps
         for i in range(data.size(0)):
-            filename = save_path + str( (batch_idx+1) * (i+1)) 
+            filename = save_path + str( (batch_idx+1) * (i+1)) + str( target_class.numpy())
             filename_simple = filename + '_simple'
 
             image = unnormalize(data[i,:,:,:].cpu())

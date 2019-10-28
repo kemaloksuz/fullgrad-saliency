@@ -145,7 +145,7 @@ class FullGrad():
                 if lin_block:
                     blockwise_features.append(feature)
                 lin_block = 0
-                feature = feature.to('cuda')
+                feature = feature.to(self.device)
                 feature = m(feature)
 
         if lin_block:
@@ -163,7 +163,6 @@ class FullGrad():
 
         image = image.requires_grad_()
         out, features = self._getFeatures(image)
-    
         if target_class is None:
             target_class = out.data.max(1, keepdim=True)[1]
 
