@@ -43,13 +43,15 @@ unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
                            std = [0.229, 0.224, 0.225])
 
 
-
+#1. Buraya bizim modelin yuklenmesi lazim
 model = vgg16_bn(pretrained=True)
 #model = models.resnext50_32x4d(pretrained=True)
 model = model.to(device) 
 # Initialize FullGrad object
 fullgrad = FullGrad(model, device)
 simple_fullgrad = SimpleFullGrad(model)
+
+#2. Buraya imagein gt classinin etiketi verilmeli
 target_class=torch.tensor([[852]]).to(device)
 
 save_path = PATH + 'results/'
