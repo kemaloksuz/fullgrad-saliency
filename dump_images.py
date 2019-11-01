@@ -19,12 +19,23 @@ from simple_fullgrad import SimpleFullGrad
 from vgg_imagenet import *
 from misc_functions import *
 import pdb
+from mmcv.parallel import MMDataParallel
 
+def init_model(path, num_classes, num_gpus):
+    model = models.vgg16_bn(pretrained = False)
+    num_ftrs = model.classifier[6].in_features
+    model.classifier[6] = nn.Linear(num_ftrs, num_classes)
+    model = MMDataParallel(model, device_ids=range(num_gpus)).cuda()
+    model.load_state_dict(torch.load(path))
+    return model
 # PATH variables
 PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
 dataset = PATH + 'dataset/'
 
 batch_size = 1
+num_classes = 80
+num_gpus = 1
+model_path = "models/vgg16bn_fromscratch_90_best.pth"
 
 cuda = torch.cuda.is_available()
 device = torch.device("cuda" if cuda else "cpu")
@@ -44,9 +55,9 @@ unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
 
 
 #1. Buraya bizim modelin yuklenmesi lazim
-model = vgg16_bn(pretrained=True)
+model = init_model(model_path, num_classes, num_gpus)
 #model = models.resnext50_32x4d(pretrained=True)
-model = model.to(device) 
+pdb.set_trace()
 # Initialize FullGrad object
 fullgrad = FullGrad(model, device)
 simple_fullgrad = SimpleFullGrad(model)
