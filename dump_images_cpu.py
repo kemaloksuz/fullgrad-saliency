@@ -22,6 +22,31 @@ import pdb
 from mmcv.parallel import MMDataParallel
 import os.path as osp
 from collections import OrderedDict
+
+cuda = torch.cuda.is_available()
+device = torch.device("cuda" if cuda else "cpu")
+
+
+def integral_image_compute(masks,gt_number,h,w):
+    integral_images= [None] * gt_number
+    pad_row=torch.zeros([gt_number,1,w]).type(torch.DoubleTensor).to(device)
+    pad_col=torch.zeros([gt_number,h+1,1]).type(torch.DoubleTensor).to(device)
+    integral_images=torch.cumsum(torch.cumsum(torch.cat([pad_col,torch.cat([pad_row,masks],dim=1)], dim=2),dim=1), dim=2)
+    return integral_images
+
+def integral_image_fetch(mask,bboxes):
+    #import pdb
+    #pdb.set_trace()
+    bboxes[:,[2,3]]+=1
+    #Create indices
+    TLx=bboxes[:,0].tolist()
+    TLy=bboxes[:,1].tolist()
+    BRx=bboxes[:,2].tolist()
+    BRy=bboxes[:,3].tolist()
+    area=mask[BRx,BRy]+mask[TLx,TLy]-mask[TLx,BRy]-mask[BRx,TLy]    
+    #area=mask[BRy,BRx]+mask[TLy,TLx]-mask[TLy,BRx]-mask[BRy,TLx]
+    return area
+
 def load_checkpoint(fpath):
     r"""Loads checkpoint.
     ``UnicodeDecodeError`` can be well handled, which means
@@ -107,6 +132,7 @@ def init_model(path, num_classes, num_gpus):
     model=load_pretrained_weights(model, path)
     #model.load_state_dict(torch.load(path, map_location=torch.device('cpu'), strict=False))
     return model
+
 # PATH variables
 PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
 dataset = PATH + 'dataset/'
@@ -116,8 +142,6 @@ num_classes = 80
 num_gpus = 1
 model_path = "/Users/Kemal/Desktop/vgg16bn_fromscratch_90_best.pth"
 
-cuda = torch.cuda.is_available()
-device = torch.device("cuda" if cuda else "cpu")
 
 # Dataset loader for sample images
 sample_loader = torch.utils.data.DataLoader(
@@ -133,7 +157,7 @@ unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
                            std = [0.229, 0.224, 0.225])
 
 
-#1. Buraya bizim modelin yuklenmesi lazim
+#1. Buraya bizim modelin yuklenmesi lazim (Bu tamam)
 model = init_model(model_path, num_classes, num_gpus)
 #model2 = vgg16_bn()
 #print(model)
@@ -160,7 +184,7 @@ for child in model.children():
 #         raw_output = model(input)
 #         print(raw_output)
 # sys.exit()                
-#model = models.resnext50_32x4d(pretrained=True)
+
 # Initialize FullGrad object
 fullgrad = FullGrad(model, device)
 #simple_fullgrad = SimpleFullGrad(model)
@@ -185,7 +209,16 @@ def compute_saliency_and_save():
 
             image = unnormalize(data[i,:,:,:].cpu())
             saliency_map=save_saliency_map(image, cam[i,:,:,:], filename + '.jpg')
-            pdb.set_trace()
+            saliency_map=torch.from_numpy((saliency_map/np.sum(saliency_map))*(224*224)).type(torch.DoubleTensor).to(device)             
+            integral_saliency_map=integral_image_compute(saliency_map,1,224,224).squeeze()
+            #3.Burada MS-COCO datasetindeki dogru annotationa integral_saliency_map eklenecek
+
+
+
+
+
+            #integral_saliency_map_fetch=integral_image_fetch(integral_saliency_map[0],np.array([[222,222,223,223]]))
+            
             #save_saliency_map(image, cam_simple[i,:,:,:], filename_simple + '.jpg')
 
 
