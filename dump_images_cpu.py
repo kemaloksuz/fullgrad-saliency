@@ -189,7 +189,7 @@ for child in model.children():
 fullgrad = FullGrad(model, device)
 #simple_fullgrad = SimpleFullGrad(model)
 
-#2. Buraya imagein gt classinin etiketi verilmeli
+#2. Buraya imagein gt classinin etiketi verilmeli-Baris
 target_class=torch.tensor([[0]]).to(device)
 
 save_path = PATH + 'results/'
@@ -208,10 +208,14 @@ def compute_saliency_and_save():
             #filename_simple = filename + '_simple'
 
             image = unnormalize(data[i,:,:,:].cpu())
+            #Compute Saliency Map, Burada Save Ediyor, butun dataseti cikarirken kapatmak lazim
             saliency_map=save_saliency_map(image, cam[i,:,:,:], filename + '.jpg')
+            #Saliencilerin toplami 224x224 olacak sekilde (yani toplam alan) normalize et
             saliency_map=torch.from_numpy((saliency_map/np.sum(saliency_map))*(224*224)).type(torch.DoubleTensor).to(device)             
+            #Trainingdeki hesaplamayi azaltmak için integral imagelerini hesapla
             integral_saliency_map=integral_image_compute(saliency_map,1,224,224).squeeze()
-            #3.Burada MS-COCO datasetindeki dogru annotationa integral_saliency_map eklenecek
+
+            #3.Burada MS-COCO datasetindeki dogru annotationa integral_saliency_map eklenecek-Baris
 
 
 
