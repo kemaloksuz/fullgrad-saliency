@@ -136,16 +136,34 @@ unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
 #1. Buraya bizim modelin yuklenmesi lazim
 model = init_model(model_path, num_classes, num_gpus)
 #model2 = vgg16_bn()
-print(model)
+#print(model)
+# for batch_idx, (data, target) in enumerate(sample_loader):
+#         data, target = data.to(device).requires_grad_(), target.to(device)
+#         input = data.to(device)
+#         model.eval()
+#         raw_output = model(input)
+#         print(raw_output)
+
+
+# Get raw outputs
+
+
 for child in model.children():
     if not isinstance(child,torch.nn.modules.pooling.AdaptiveAvgPool2d):
         for i in range(len(child)):
             if isinstance(child[i],torch.nn.modules.activation.ReLU):
                 child[i]=torch.nn.ReLU(inplace=False)
+# for batch_idx, (data, target) in enumerate(sample_loader):
+#         data, target = data.to(device).requires_grad_(), target.to(device)
+#         input = data.to(device)
+#         model.eval()
+#         raw_output = model(input)
+#         print(raw_output)
+# sys.exit()                
 #model = models.resnext50_32x4d(pretrained=True)
 # Initialize FullGrad object
 fullgrad = FullGrad(model, device)
-simple_fullgrad = SimpleFullGrad(model)
+#simple_fullgrad = SimpleFullGrad(model)
 
 #2. Buraya imagein gt classinin etiketi verilmeli
 target_class=torch.tensor([[0]]).to(device)
@@ -158,17 +176,17 @@ def compute_saliency_and_save():
 
         # Compute saliency maps for the input data
         cam = fullgrad.saliency(data, target_class = target_class)
-        
-        cam_simple = simple_fullgrad.saliency(data, target_class = target_class)
+        #cam_simple = simple_fullgrad.saliency(data, target_class = target_class)
 
         # Save saliency maps
         for i in range(data.size(0)):
             filename = save_path + str( (batch_idx+1) * (i+1)) + str( target_class.numpy())
-            filename_simple = filename + '_simple'
+            #filename_simple = filename + '_simple'
 
             image = unnormalize(data[i,:,:,:].cpu())
-            save_saliency_map(image, cam[i,:,:,:], filename + '.jpg')
-            save_saliency_map(image, cam_simple[i,:,:,:], filename_simple + '.jpg')
+            saliency_map=save_saliency_map(image, cam[i,:,:,:], filename + '.jpg')
+            pdb.set_trace()
+            #save_saliency_map(image, cam_simple[i,:,:,:], filename_simple + '.jpg')
 
 
 #---------------------------------------------------------------------------------#

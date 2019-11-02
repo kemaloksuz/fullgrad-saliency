@@ -49,9 +49,9 @@ def save_saliency_map(image, saliency_map, filename):
 
     saliency_map = saliency_map - saliency_map.min()
     saliency_map = saliency_map / saliency_map.max()
-    saliency_map = saliency_map.clip(0,1)
+    saliency_map_return = saliency_map.clip(0,1)
 
-    saliency_map = np.uint8(saliency_map * 255).transpose(1, 2, 0)
+    saliency_map = np.uint8(saliency_map_return * 255).transpose(1, 2, 0)
     saliency_map = cv2.resize(saliency_map, (224,224))
 
     image = np.uint8(image * 255).transpose(1,2,0)
@@ -65,3 +65,4 @@ def save_saliency_map(image, saliency_map, filename):
     img_with_heatmap = img_with_heatmap / np.max(img_with_heatmap)
 
     cv2.imwrite(filename, np.uint8(255 * img_with_heatmap))
+    return saliency_map_return
