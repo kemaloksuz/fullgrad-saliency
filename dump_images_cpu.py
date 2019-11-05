@@ -27,6 +27,22 @@ cuda = torch.cuda.is_available()
 device = torch.device("cuda" if cuda else "cpu")
 
 
+CLASSES = np.array(['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+           'train', 'truck', 'boat', 'traffic_light', 'fire_hydrant',
+           'stop_sign', 'parking_meter', 'bench', 'bird', 'cat', 'dog',
+           'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
+           'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+           'skis', 'snowboard', 'sports_ball', 'kite', 'baseball_bat',
+           'baseball_glove', 'skateboard', 'surfboard', 'tennis_racket',
+           'bottle', 'wine_glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+           'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot',
+           'hot_dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+           'potted_plant', 'bed', 'dining_table', 'toilet', 'tv', 'laptop',
+           'mouse', 'remote', 'keyboard', 'cell_phone', 'microwave',
+           'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
+           'vase', 'scissors', 'teddy_bear', 'hair_drier', 'toothbrush'])
+CLASSES=np.sort(CLASSES)
+
 def integral_image_compute(masks,gt_number,h,w):
     integral_images= [None] * gt_number
     pad_row=torch.zeros([gt_number,1,w]).type(torch.DoubleTensor).to(device)
@@ -177,12 +193,6 @@ for child in model.children():
         for i in range(len(child)):
             if isinstance(child[i],torch.nn.modules.activation.ReLU):
                 child[i]=torch.nn.ReLU(inplace=False)
-# for batch_idx, (data, target) in enumerate(sample_loader):
-#         data, target = data.to(device).requires_grad_(), target.to(device)
-#         input = data.to(device)
-#         model.eval()
-#         raw_output = model(input)
-#         print(raw_output)
 # sys.exit()                
 
 # Initialize FullGrad object
@@ -190,13 +200,19 @@ fullgrad = FullGrad(model, device)
 #simple_fullgrad = SimpleFullGrad(model)
 
 #2. Buraya imagein gt classinin etiketi verilmeli-Baris
-target_class=torch.tensor([[0]]).to(device)
+target_class=torch.tensor([[49]]).to(device)
 
 save_path = PATH + 'results/'
 
 def compute_saliency_and_save():
     for batch_idx, (data, target) in enumerate(sample_loader):
         data, target = data.to(device).requires_grad_(), target.to(device)
+        with torch.no_grad():
+        	model.eval()
+	        raw_output = model(data)
+	        probs=torch.softmax(raw_output[0], dim=0)
+	        print("Desired class probability:", probs[target_class])
+	        print("Predicted class and probability:", CLASSES[torch.argmax(probs)], torch.max(probs))
 
         # Compute saliency maps for the input data
         cam = fullgrad.saliency(data, target_class = target_class)
@@ -204,7 +220,7 @@ def compute_saliency_and_save():
 
         # Save saliency maps
         for i in range(data.size(0)):
-            filename = save_path + str( (batch_idx+1) * (i+1)) + str( target_class.numpy())
+            filename = save_path + str( (batch_idx+1) * (i+1)) + str(target_class.numpy())
             #filename_simple = filename + '_simple'
 
             image = unnormalize(data[i,:,:,:].cpu())
