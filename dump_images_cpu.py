@@ -24,7 +24,7 @@ import os.path as osp
 from collections import OrderedDict
 
 cuda = torch.cuda.is_available()
-device = torch.device("cuda" if cuda else "cpu")
+device = torch.device("cpu")
 
 
 CLASSES = np.array(['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
@@ -41,7 +41,7 @@ CLASSES = np.array(['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
            'mouse', 'remote', 'keyboard', 'cell_phone', 'microwave',
            'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
            'vase', 'scissors', 'teddy_bear', 'hair_drier', 'toothbrush'])
-CLASSES=np.sort(CLASSES)
+CLASSES_=np.sort(CLASSES)
 
 def integral_image_compute(masks,gt_number,h,w):
     integral_images= [None] * gt_number
@@ -151,12 +151,12 @@ def init_model(path, num_classes, num_gpus):
 
 # PATH variables
 PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
-dataset = PATH + 'dataset/'
+dataset = PATH + 'dataset/coco/val'
 
 batch_size = 1
 num_classes = 80
 num_gpus = 1
-model_path = "/Users/Kemal/Desktop/vgg16bn_fromscratch_90_best.pth"
+model_path = PATH + 'models/vgg16bn_fromscratch_90_best.pth'
 
 
 # Dataset loader for sample images
@@ -200,21 +200,23 @@ fullgrad = FullGrad(model, device)
 #simple_fullgrad = SimpleFullGrad(model)
 
 #2. Buraya imagein gt classinin etiketi verilmeli-Baris
-target_class=torch.tensor([[49]]).to(device)
+#target_class=torch.tensor([[49]]).to(device)
 
 save_path = PATH + 'results/'
 
 def compute_saliency_and_save():
     for batch_idx, (data, target) in enumerate(sample_loader):
-        data, target = data.to(device).requires_grad_(), target.to(device)
+        data, target_class = data.to(device).requires_grad_(), target.to(device)
+        target_class_COCO = np.where(CLASSES == CLASSES_[target])
         with torch.no_grad():
         	model.eval()
 	        raw_output = model(data)
 	        probs=torch.softmax(raw_output[0], dim=0)
 	        print("Desired class probability:", probs[target_class])
-	        print("Predicted class and probability:", CLASSES[torch.argmax(probs)], torch.max(probs))
+	        print("Predicted class and probability:", CLASSES_[torch.argmax(probs)], torch.max(probs))
 
         # Compute saliency maps for the input data
+        pdb.set_trace()
         cam = fullgrad.saliency(data, target_class = target_class)
         #cam_simple = simple_fullgrad.saliency(data, target_class = target_class)
 
