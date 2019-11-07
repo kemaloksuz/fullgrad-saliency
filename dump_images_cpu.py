@@ -43,6 +43,14 @@ CLASSES = np.array(['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
            'vase', 'scissors', 'teddy_bear', 'hair_drier', 'toothbrush'])
 CLASSES_=np.sort(CLASSES)
 
+path_ws='dataset/coco/val'
+#path_ws='dataset/cocotowork'
+#root_path = '/Users/Kemal/Documents/GitHub/fullgrad-saliency/dataset/cocotowork'
+#for folder in CLASSES_:
+#    os.mkdir(osp.join(root_path,str(folder)))
+
+#sys.exit()
+
 def integral_image_compute(masks,gt_number,h,w):
     integral_images= [None] * gt_number
     pad_row=torch.zeros([gt_number,1,w]).type(torch.DoubleTensor).to(device)
@@ -151,7 +159,7 @@ def init_model(path, num_classes, num_gpus):
 
 # PATH variables
 PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
-dataset = PATH + 'dataset/coco/val'
+dataset = PATH + path_ws
 
 batch_size = 1
 num_classes = 80
@@ -216,13 +224,13 @@ def compute_saliency_and_save():
 	        print("Predicted class and probability:", CLASSES_[torch.argmax(probs)], torch.max(probs))
 
         # Compute saliency maps for the input data
-        pdb.set_trace()
+        #pdb.set_trace()
         cam = fullgrad.saliency(data, target_class = target_class)
         #cam_simple = simple_fullgrad.saliency(data, target_class = target_class)
 
         # Save saliency maps
         for i in range(data.size(0)):
-            filename = save_path + str( (batch_idx+1) * (i+1)) + str(target_class.numpy())
+            filename = save_path + str( (batch_idx+1) * (i+1)) + CLASSES_[torch.argmax(probs)]
             #filename_simple = filename + '_simple'
 
             image = unnormalize(data[i,:,:,:].cpu())
