@@ -231,7 +231,7 @@ def compute_saliency_and_save():
 
         # Save saliency maps
         for i in range(data.size(0)):
-            filename = save_path + CLASSES_[target_class] + " is pred as "+ CLASSES_[pred_class_idx] + " with p="+ str(probs[pred_class_idx].cpu().numpy())[:4] +", Target Class p=" + str(probs[target_class][0].cpu().numpy())[:4] + "Target Raw= " + str(raw_output[0][target_class][0].cpu().numpy())[:4]
+            filename = save_path + CLASSES_[target_class] + " is pred as "+ CLASSES_[pred_class_idx] + " with p="+ str(probs[pred_class_idx].cpu().numpy())[:4] +", Target Class p=" + str(probs[target_class][0].cpu().numpy())[:4] + " Target Raw= " + str(raw_output[0][target_class][0].cpu().numpy())[:4]
             #filename_simple = filename + '_simple'
 
             image = unnormalize(data[i,:,:,:].cpu())
