@@ -217,11 +217,12 @@ def compute_saliency_and_save():
         data, target_class = data.to(device).requires_grad_(), target.to(device)
         target_class_COCO = np.where(CLASSES == CLASSES_[target])
         with torch.no_grad():
-        	model.eval()
-	        raw_output = model(data)
-	        probs=torch.softmax(raw_output[0], dim=0)
-	        print("Desired class probability:", probs[target_class])
-	        print("Predicted class and probability:", CLASSES_[torch.argmax(probs)], torch.max(probs))
+            model.eval()
+            raw_output = model(data)
+            probs=torch.softmax(raw_output[0], dim=0)
+            pred_class_idx=torch.argmax(probs)
+            print("Desired class probability:", probs[target_class])
+            print("Predicted class and probability:", CLASSES_[pred_class_idx], torch.max(probs))
 
         # Compute saliency maps for the input data
         #pdb.set_trace()
@@ -230,7 +231,7 @@ def compute_saliency_and_save():
 
         # Save saliency maps
         for i in range(data.size(0)):
-            filename = save_path + str( (batch_idx+1) * (i+1)) + CLASSES_[torch.argmax(probs)]
+            filename = save_path + CLASSES_[target_class] + " is pred as "+ CLASSES_[pred_class_idx] + " with p="+ str(probs[pred_class_idx].cpu().numpy())[:4] +", Target Class p=" + str(probs[target_class][0].cpu().numpy())[:4] + "Target Raw= " + str(raw_output[target_class][0].cpu().numpy())[:4]
             #filename_simple = filename + '_simple'
 
             image = unnormalize(data[i,:,:,:].cpu())

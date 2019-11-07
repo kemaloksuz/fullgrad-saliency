@@ -163,7 +163,7 @@ class FullGrad():
 
         image = image.requires_grad_()
         out, features = self._getFeatures(image)
-        pdb.set_trace()
+        #pdb.set_trace()
         if target_class is None:
             target_class = out.data.max(1, keepdim=True)[1]
 
