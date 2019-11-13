@@ -9,9 +9,6 @@ from matplotlib import pyplot as plt
 import os
 import pdb
 import torch
-import time
-import json
-from statistics import mean
 
 class CocoDataset():
 
@@ -37,7 +34,17 @@ class CocoDataset():
         # create folders
         self.path = PATH
         self.part_info = []
-        # open a new list for annotations.
+        # new instances for new annotation file
+        self.info_ = dict(description = "COCO 2017-wSaliencies",\
+                           url = None, \
+                           version = "1.0", \
+                           year = "2019", \
+                           contributor = "COCO Consortium",
+                           date_created = "2019/11/13")
+        self.licences_ = []
+        self.images = []
+        self.annotations = []
+        self.cats = []
         self.size = 224
         self.set_name = set_name
         self.extract_saliency = False
@@ -46,34 +53,23 @@ class CocoDataset():
         self.processed_path = os.path.join(self.data_path, \
         								   'fine_tune', self.set_name[:-4])
         self.create_folders(self.processed_path)
-        # load annotations
-        ann_filename = 'annotations/instances_' + set_name + '.json'
-        ann_file = os.path.join(self.data_path, ann_filename)
-        self.img_infos = self.load_annotations(ann_file) 
         if extract_saliency:
             self.extract_saliency = extract_saliency
             # if saliency is to be extracted, create modified ann_files.
-            ann_filename_saliency = 'dataset/coco/annotations/instances_' + set_name + '_wParts.json'
-            self.ann_file_saliency = os.path.join(PATH, ann_filename_saliency)
-            # initialize new dataset instances
-            self.initialize_annotations()
+            ann_filename_saliency = 'annotations/instances' + set_name + '_wParts.json'
+            self.ann_file = os.path.join(PATH, ann_filename_saliency)
             # construct full-grad object
             model_path = os.path.join(self.path, 'models', \
                                       'vgg16bn_fromscratch_90_best.pth')
             self.model = misc_functions.init_model(model_path)        
             self.device = "cpu"
-            self.fullgrad = FullGrad(self.model, self.device) 
-    
-    def initialize_annotations(self):
-        # copies unchanged instances of old dataset
-        # to new dataset.
-        self.info_ = self.coco.dataset['info']
-        self.categories_ = self.coco.dataset['categories']
-        self.licenses_ = self.coco.dataset['licenses']
-        self.images_ = self.coco.dataset['images']
-        # initialize an empty list for new annotation file.
-        self.annotations_ = [] 
+            self.fullgrad = FullGrad(self.model, self.device)
 
+        # get ann file.
+        ann_filename = 'annotations/instances_' + set_name + '.json'
+        ann_file = os.path.join(self.data_path, ann_filename)
+        self.img_infos = self.load_annotations(ann_file)
+        pdb.set_trace() 
     def create_folders(self,path):
         # create folders if not exist
         for idx, cname in enumerate(self.CLASSES):
@@ -87,18 +83,20 @@ class CocoDataset():
         measure = box[2] * box[3]
         return area, measure
 
-    def seperate_parts(self, img, bboxes, labels, integral_flags, debug=True):
+    def seperate_parts(self, img, bboxes, labels, debug=True):
+        
         partwlabel = []
         integral_list = []
 
         for idx, box in enumerate(bboxes):
             area, measure = self.convert_boxes(box)
             part = img.crop(area)
+            
             if self.extract_saliency:
                 # extract saliency maps of each part in image
                 
                 # transform images
-                #part.show()
+                part.show()
                 transforms = misc_functions.get_transforms()
                 part_ = transforms(part)
                 part_ = part_.unsqueeze(0) 
@@ -113,87 +111,58 @@ class CocoDataset():
                     # one should convert coco annotations into alphabetical order
                     # to get desired class probability.
                         
-                    #print("Desired Class Probability:", probs[labels_[idx]])
-                    #print("Predicted class and probability:", \
-                    #       self.CLASSES_sorted[torch.argmax(probs)],\
-                    #       torch.max(probs))
+                    print("Desired Class Probability:", probs[labels_[idx]])
+                    print("Predicted class and probability:", \
+                           self.CLASSES_sorted[torch.argmax(probs)],\
+                           torch.max(probs))
                 cam = self.fullgrad.saliency(part_, \
                                              target_class=torch.tensor([labels_[idx]]))
                 part_inversed = misc_functions.get_transforms_inverse(part_[0,:,:,:].cpu())
-                saliency_map = misc_functions.save_saliency_map(part_inversed, cam[0,:,:,:], \
-                                                                './dummy.jpg')
-                saliency_map = torch.from_numpy((saliency_map / \
-                                                np.sum(saliency_map))*\
-                                                (self.size*self.size)).\
-                                                type(torch.DoubleTensor).to(self.device)
-
+                saliency_map = misc_functions.save_saliency_map(part_inversed, cam[0,:,:,:], './dummy.jpg')
+                saliency_map = torch.from_numpy((saliency_map / np.sum(saliency_map))*(self.size*self.size)).type(torch.DoubleTensor).to(self.device)
                 integral_saliency_map = misc_functions.integral_image_compute(saliency_map, \
                                                                               1, self.size, self.size, \
                                                                               device = self.device).\
                                                                               squeeze()
-                if integral_flags[idx] == False:
-                    integral_list.append(torch.tensor([]))
-                else:
-                    integral_list.append(integral_saliency_map)        
+                integral_list.append(integral_saliency_map)        
             if debug:
                 part.show()
                 print(self.CLASSES[labels[idx]-1])
             
             partwlabel.append([part, labels[idx], measure])
-
+        
         return partwlabel,integral_list
 
     def read_image(self, path):
         return Image.open(path)
 
-    def save_anns(self):
-        print("Saving annotations with parts...")
-        json_data = {
-                'info': self.info_,
-                'licenses': self.licenses_,
-                'images': self.images_,
-                'annotations': self.annotations_,
-                'categories': self.categories_
-                }
-        with open(self.ann_file_saliency, 'w') as fp:
-            json.dump(json_data, fp, sort_keys =True, indent=4)
-        print("Done, PATH: {}".format(self.ann_file_saliency))
-    def process_images(self, save=False):
+    def process_images(self, save=True):
         # filter images
         valid_inds = self._filter_imgs()
         self.img_infos = [self.img_infos[i] for i in valid_inds]
         imgs_w_parts = []
+        pdb.set_trace()
         # load images and metas.
-        times = []
-        #len(self.img_infos))
         for idx in range(0, len(self.img_infos)):
             # read img info, annotations.
             img_info = self.img_infos[idx]
             ann_info = self.get_ann_info(idx)
-            #print("Check ID: {}".format(img_info['id']))
+            print("Check ID: {}".format(img_info['id']))
             # get bboxes and labels
             bboxes = ann_info['bboxes']
             labels = ann_info['labels']
-            integral_flags = ann_info['write_integral']
             # read image
             img = self.read_image(os.path.join(self.data_path, self.set_name, img_info['filename']))
                        
             # pass to crop function
-            start = time.time()
-            part_tuples, integrals = self.seperate_parts(img, bboxes, labels, \
-                                                         integral_flags, debug=False)
-            #print("Len ann info: {}".format(len(labels)))
-            #print("Number of Integrals: {}".format(len(integrals)))
-            self.gather_annotations(idx, integrals)
-            end = time.time()
-            times.append(end-start)
+            part_tuples, integrals = self.seperate_parts(img, bboxes, labels, debug=False)
+            self.gather_annotations(ann_info, integrals)
             scales = [element[2]/(img_info['height'] * img_info['width']) for element in part_tuples]
             self.part_info.append([len(part_tuples), scales])
-            if idx % 1 == 0:
-                mean_time = mean(times)
-                print("Image count:[{}] / [{}], Total Parts: {} Mean Time: {:.4f} sec.\n".\
-                       format(idx, len(self.img_infos),len(part_tuples), mean_time))
-                times = []
+            if idx % 100 == 0:
+                print("Image count:[{}]/[{}], Total Parts:{}\n".\
+                       format(idx, len(self.img_infos),len(part_tuples)))
+ 
             
             # collect tuples to save parts w/labels.
             if save:
@@ -206,9 +175,10 @@ class CocoDataset():
                         continue
                     else:
                         part_tuple[0].save(save_name)
-        self.save_anns()
+            
         return self.part_info
-                
+
+            
     def load_annotations(self, ann_file):
         self.coco = COCO(ann_file)
         self.cat_ids = self.coco.getCatIds()
@@ -226,16 +196,22 @@ class CocoDataset():
 
     def gather_annotations(self, idx, integrals):
         img_id = self.img_infos[idx]['id']
-        ann_ids = self.coco.getAnnIds(imgIds=[img_id])
+        ann_ids = self.coco.getAnnId(imgIds=[img_id])
         ann_info = self.coco.loadAnns(ann_ids)
-        for counter, part_info in enumerate(ann_info):
-            part_info['gt_saliency_map'] = integrals[counter].numpy().tolist()
-            self.annotations_.append(part_info)
+        ann_info['gt_saliency_map'] = integrals
+        self.annotations_.append(ann_info)
+        self.images_.append(self.img_infos[idx])
+        pdb.set_trace()
+        self.cats_.append(cats)
+        raise NotImplementedError
+        
+
 
     def get_ann_info(self, idx):
         img_id = self.img_infos[idx]['id']
         ann_ids = self.coco.getAnnIds(imgIds=[img_id])
         ann_info = self.coco.loadAnns(ann_ids)
+        pdb.set_trace()
         return self._parse_ann_info(self.img_infos[idx], ann_info)
 
     def _filter_imgs(self, min_size=32):
@@ -265,7 +241,6 @@ class CocoDataset():
         gt_labels = []
         gt_bboxes_ignore = []
         gt_masks_ann = []
-        write_integral = []
 
         for i, ann in enumerate(ann_info):
             if ann.get('ignore', False):
@@ -276,14 +251,10 @@ class CocoDataset():
             bbox = [x1, y1, x1 + w - 1, y1 + h - 1]
             if ann.get('iscrowd', False):
                 gt_bboxes_ignore.append(bbox)
-                gt_labels.append(self.cat2label[ann['category_id']])
-                gt_bboxes.append(bbox)
-                write_integral.append(False)
             else:
                 gt_bboxes.append(bbox)
                 gt_labels.append(self.cat2label[ann['category_id']])
                 gt_masks_ann.append(ann['segmentation'])
-                write_integral.append(True)
 
         if gt_bboxes:
             gt_bboxes = np.array(gt_bboxes, dtype=np.float32)
@@ -304,7 +275,6 @@ class CocoDataset():
             labels=gt_labels,
             bboxes_ignore=gt_bboxes_ignore,
             masks=gt_masks_ann,
-            seg_map=seg_map,
-            write_integral=write_integral)
+            seg_map=seg_map)
 
         return ann

@@ -22,18 +22,9 @@ import pdb
 from mmcv.parallel import MMDataParallel
 import os.path as osp
 from collections import OrderedDict
-from shutil import copyfile
-
-class ImageFolderWithPaths(datasets.ImageFolder):
-    def __getitem__(self,index):
-        original_tuple = super(ImageFolderWithPaths, self).__getitem__(index)
-        path = self.imgs[index][0]
-        tuple_with_path = (original_tuple + (path,))
-        return tuple_with_path
 
 cuda = torch.cuda.is_available()
 device = torch.device("cpu")
-
 
 
 CLASSES = np.array(['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
@@ -51,14 +42,6 @@ CLASSES = np.array(['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
            'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
            'vase', 'scissors', 'teddy_bear', 'hair_drier', 'toothbrush'])
 CLASSES_=np.sort(CLASSES)
-
-path_ws='dataset/coco/val'
-#path_ws='dataset/cocotowork'
-#root_path = '/Users/Kemal/Documents/GitHub/fullgrad-saliency/dataset/cocotowork'
-#for folder in CLASSES_:
-#    os.mkdir(osp.join(root_path,str(folder)))
-
-#sys.exit()
 
 def integral_image_compute(masks,gt_number,h,w):
     integral_images= [None] * gt_number
@@ -167,8 +150,9 @@ def init_model(path, num_classes, num_gpus):
     return model
 
 # PATH variables
-PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
-dataset = PATH + path_ws
+#PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
+PATH = "/home/cancam/workspace/fullgrad-saliency/"
+dataset = PATH + 'dataset/imagenet'
 
 batch_size = 1
 num_classes = 80
@@ -178,13 +162,13 @@ model_path = PATH + 'models/vgg16bn_fromscratch_90_best.pth'
 
 # Dataset loader for sample images
 sample_loader = torch.utils.data.DataLoader(
-    ImageFolderWithPaths(dataset, transform=transforms.Compose([
+    datasets.ImageFolder(dataset, transform=transforms.Compose([
                        transforms.Resize((224,224)),
                        transforms.ToTensor(),
                        transforms.Normalize(mean = [0.485, 0.456, 0.406],
                                         std = [0.229, 0.224, 0.225])
                    ])),
-    batch_size= batch_size, shuffle=True)
+    batch_size= batch_size, shuffle=False)
 
 unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
                            std = [0.229, 0.224, 0.225])
@@ -222,38 +206,33 @@ fullgrad = FullGrad(model, device)
 save_path = PATH + 'results/'
 
 def compute_saliency_and_save():
-    for batch_idx, (data, target, paths) in enumerate(sample_loader):
-        if batch_idx == 100:
-            break
+    for batch_idx, (data, target) in enumerate(sample_loader):
         data, target_class = data.to(device).requires_grad_(), target.to(device)
-        pdb.set_trace()
         target_class_COCO = np.where(CLASSES == CLASSES_[target])
         with torch.no_grad():
-            model.eval()
-            raw_output = model(data)
-            probs=torch.softmax(raw_output[0], dim=0)
-            pred_class_idx=torch.argmax(probs)
-            print("Desired class probability:", probs[target_class])
-            print("Predicted class and probability:", CLASSES_[pred_class_idx], torch.max(probs))
+        	model.eval()
+	        raw_output = model(data)
+	        probs=torch.softmax(raw_output[0], dim=0)
+	        print("Desired class probability:", probs[target_class])
+	        print("Predicted class and probability:", CLASSES_[torch.argmax(probs)], torch.max(probs))
 
         # Compute saliency maps for the input data
         cam = fullgrad.saliency(data, target_class = target_class)
         #cam_simple = simple_fullgrad.saliency(data, target_class = target_class)
-
+        pdb.set_trace()
         # Save saliency maps
         for i in range(data.size(0)):
-            filename = save_path + CLASSES_[target_class] + " is pred as "+ CLASSES_[pred_class_idx] + " with p="+ str(probs[pred_class_idx].cpu().numpy())[:4] +", Target Class p=" + str(probs[target_class][0].cpu().numpy())[:4] + " Target Raw= " + str(raw_output[0][target_class][0].cpu().numpy())[:4]
+            filename = save_path + str( (batch_idx+1) * (i+1)) + str(target_class.numpy())
             #filename_simple = filename + '_simple'
-            filename_original = filename + 'raw'
+
             image = unnormalize(data[i,:,:,:].cpu())
             #Compute Saliency Map, Burada Save Ediyor, butun dataseti cikarirken kapatmak lazim
             saliency_map=save_saliency_map(image, cam[i,:,:,:], filename + '.jpg')
-            copyfile(paths[0], filename_original + '.jpg')  
             #Saliencilerin toplami 224x224 olacak sekilde (yani toplam alan) normalize et
             saliency_map=torch.from_numpy((saliency_map/np.sum(saliency_map))*(224*224)).type(torch.DoubleTensor).to(device)             
             #Trainingdeki hesaplamayi azaltmak için integral imagelerini hesapla
             integral_saliency_map=integral_image_compute(saliency_map,1,224,224).squeeze()
-
+            pdb.set_trace()
             #3.Burada MS-COCO datasetindeki dogru annotationa integral_saliency_map eklenecek-Baris
 
 
