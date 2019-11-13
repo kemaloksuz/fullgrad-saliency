@@ -132,7 +132,7 @@ class CocoDataset():
                                                                               device = self.device).\
                                                                               squeeze()
                 if integral_flags[idx] == False:
-                    integral_list.append(None)
+                    integral_list.append(torch.tensor([]))
                 else:
                     integral_list.append(integral_saliency_map)        
             if debug:
@@ -166,7 +166,7 @@ class CocoDataset():
         # load images and metas.
         times = []
         #len(self.img_infos))
-        for idx in range(0, 2):
+        for idx in range(0, len(self.img_infos)):
             # read img info, annotations.
             img_info = self.img_infos[idx]
             ann_info = self.get_ann_info(idx)
