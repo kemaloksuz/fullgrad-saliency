@@ -6,6 +6,7 @@ from fullgrad import misc_functions
 from fullgrad.fullgrad import FullGrad
 from matplotlib import pyplot as plt
 from statistics import mean
+from mmcv.parallel import MMDataParallel
 
 import os
 import pdb
@@ -40,6 +41,7 @@ class CocoDataset():
         self.part_info = []
         # open a new list for annotations.
         self.size = 224
+        self.num_gpus = 2
         self.set_name = set_name
         self.extract_saliency = False
         self.model = None
@@ -48,7 +50,7 @@ class CocoDataset():
         								   'fine_tune', self.set_name[:-4])
         self.create_folders(self.processed_path)
         # load annotations
-        ann_filename = 'annotations/instances_' + set_name + '_minicoco_wParts.json'
+        ann_filename = 'annotations/instances_' + set_name + '_minicoco.json'
         ann_file = os.path.join(self.data_path, ann_filename)
         self.img_infos = self.load_annotations(ann_file) 
         if extract_saliency:
@@ -63,8 +65,9 @@ class CocoDataset():
                                       'vgg16bn_fromscratch_90_best.pth')
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             self.model = misc_functions.init_model(model_path).to(self.device)       
-
-            self.fullgrad = FullGrad(self.model, self.device) 
+            self.model = MMDataParallel(misc_functions.init_model(model_path), \
+                                        device_ids=range(self.num_gpus)).cuda()
+            self.fullgrad = FullGrad(self.model, self.device)
     
     def initialize_annotations(self):
         # copies unchanged instances of old dataset
@@ -286,23 +289,23 @@ class CocoDataset():
 
         for i, ann in enumerate(ann_info):
             if ann.get('ignore', False):
-                #write_integral.append(False)
-                continue
+                write_integral.append(False)
+                #continue
             x1, y1, w, h = ann['bbox']
             if ann['area'] <= 0 or w < 1 or h < 1:
-                #write_integral.append(False)
-                continue
+                write_integral.append(False)
+                #continue
             bbox = [x1, y1, x1 + w - 1, y1 + h - 1]
             if ann.get('iscrowd', False):
                 gt_bboxes_ignore.append(bbox)
-                #gt_labels.append(self.cat2label[ann['category_id']])
-                #gt_bboxes.append(bbox)
-                #write_integral.append(False)
+                gt_labels.append(self.cat2label[ann['category_id']])
+                gt_bboxes.append(bbox)
+                write_integral.append(False)
             else:
                 gt_bboxes.append(bbox)
                 gt_labels.append(self.cat2label[ann['category_id']])
                 gt_masks_ann.append(ann['segmentation'])
-                #write_integral.append(True)
+                write_integral.append(True)
 
         if gt_bboxes:
             gt_bboxes = np.array(gt_bboxes, dtype=np.float32)
