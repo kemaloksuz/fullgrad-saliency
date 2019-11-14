@@ -5,13 +5,14 @@ from PIL import ImageOps
 from fullgrad import misc_functions
 from fullgrad.fullgrad import FullGrad
 from matplotlib import pyplot as plt
+from statistics import mean
 
 import os
 import pdb
 import torch
 import time
 import json
-from statistics import mean
+
 
 class CocoDataset():
 
@@ -47,21 +48,22 @@ class CocoDataset():
         								   'fine_tune', self.set_name[:-4])
         self.create_folders(self.processed_path)
         # load annotations
-        ann_filename = 'annotations/instances_' + set_name + '.json'
+        ann_filename = 'annotations/instances_' + set_name + '_minicoco.json'
         ann_file = os.path.join(self.data_path, ann_filename)
         self.img_infos = self.load_annotations(ann_file) 
         if extract_saliency:
             self.extract_saliency = extract_saliency
             # if saliency is to be extracted, create modified ann_files.
-            ann_filename_saliency = 'dataset/coco/annotations/instances_' + set_name + '_wParts.json'
+            ann_filename_saliency = 'dataset/coco/annotations/instances_' + set_name + '_minicoco_wParts.json'
             self.ann_file_saliency = os.path.join(PATH, ann_filename_saliency)
             # initialize new dataset instances
             self.initialize_annotations()
             # construct full-grad object
             model_path = os.path.join(self.path, 'models', \
                                       'vgg16bn_fromscratch_90_best.pth')
-            self.model = misc_functions.init_model(model_path)        
-            self.device = "cpu"
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            self.model = misc_functions.init_model(model_path).to(self.device)       
+
             self.fullgrad = FullGrad(self.model, self.device) 
     
     def initialize_annotations(self):
@@ -99,8 +101,10 @@ class CocoDataset():
                 
                 # transform images
                 #part.show()
-                transforms = misc_functions.get_transforms()
-                part_ = transforms(part)
+                transforms = misc_functions.get_transforms(part)
+                if part.mode!='RGB':
+                    part=part.convert('RGB')
+                part_ = transforms(part).to(self.device)
                 part_ = part_.unsqueeze(0) 
                 # convert labels to sorted labels
                 labels_ = misc_functions.get_indices(labels, self.CLASSES, \
@@ -126,7 +130,6 @@ class CocoDataset():
                                                 np.sum(saliency_map))*\
                                                 (self.size*self.size)).\
                                                 type(torch.DoubleTensor).to(self.device)
-
                 integral_saliency_map = misc_functions.integral_image_compute(saliency_map, \
                                                                               1, self.size, self.size, \
                                                                               device = self.device).\
@@ -201,6 +204,8 @@ class CocoDataset():
                     save_path = os.path.join(self.processed_path, self.CLASSES[part_tuple[1]-1])
                     im_name = str(img_info['id']) + '_' + str(tup_idx) + '.jpg'
                     save_name = os.path.join(save_path, im_name)
+                    print(save_name)
+                    pdb.set_trace()
                     # ignore 1d images after crop
                     if 0 in part_tuple[0].size:
                         continue
@@ -229,7 +234,15 @@ class CocoDataset():
         ann_ids = self.coco.getAnnIds(imgIds=[img_id])
         ann_info = self.coco.loadAnns(ann_ids)
         for counter, part_info in enumerate(ann_info):
-            part_info['gt_saliency_map'] = integrals[counter].numpy().tolist()
+            if self.device=="cpu":
+                part_info['gt_saliency_map'] = integrals[counter].numpy().astype(np.single).tolist()
+            else:
+                part_info['gt_saliency_map'] = integrals[counter].cpu().numpy().astype(np.single).tolist()
+#            aa=integrals[counter].cpu().numpy()
+#            aaa=integrals[counter].numpy().astype(np.single)
+#            print("%d bytes" % (aa.size * aa.itemsize))
+#            print("%d bytes" % (aaa.size * aaa.itemsize))
+#            pdb.set_trace()
             self.annotations_.append(part_info)
 
     def get_ann_info(self, idx):

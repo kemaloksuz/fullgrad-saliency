@@ -17,8 +17,8 @@ def main(PATH, set_name, construct_dataset, extract_saliency):
     	dataset_info = coco_ds.process_images()
     	
 if __name__ == '__main__':
-    PATH = '/home/cancam/workspace/fullgrad-saliency'
-    set_names = ['train2017', 'val2017']
+    PATH = '/home/cancam/imgworkspace/fullgrad-saliency'
+    set_names = ['train2017']
     for set_name in set_names:
     	construct_dataset = False
     	extract_saliency = True

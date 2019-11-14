@@ -187,7 +187,7 @@ def get_transforms_inverse(img):
                             std=[0.229, 0.224, 0.225])
     return inverter(img)
 
-def get_transforms():
+def get_transforms(part):
     return transforms.Compose([
         transforms.Resize((224,224)),
         transforms.ToTensor(),
