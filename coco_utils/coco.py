@@ -48,7 +48,7 @@ class CocoDataset():
         								   'fine_tune', self.set_name[:-4])
         self.create_folders(self.processed_path)
         # load annotations
-        ann_filename = 'annotations/instances_' + set_name + '_minicoco.json'
+        ann_filename = 'annotations/instances_' + set_name + '_minicoco_wParts.json'
         ann_file = os.path.join(self.data_path, ann_filename)
         self.img_infos = self.load_annotations(ann_file) 
         if extract_saliency:
@@ -169,7 +169,7 @@ class CocoDataset():
         # load images and metas.
         times = []
         #len(self.img_infos))
-        for idx in range(0, len(self.img_infos)):
+        for idx in range(0, 100):
             # read img info, annotations.
             img_info = self.img_infos[idx]
             ann_info = self.get_ann_info(idx)
@@ -233,6 +233,10 @@ class CocoDataset():
         img_id = self.img_infos[idx]['id']
         ann_ids = self.coco.getAnnIds(imgIds=[img_id])
         ann_info = self.coco.loadAnns(ann_ids)
+        #print("Len of ann_info: {}".format(len(ann_info)))
+        #print("Len of integrals: {}".format(len(integrals)))
+        #if len(ann_info) != len(integrals):
+            #pdb.set_trace()
         for counter, part_info in enumerate(ann_info):
             if self.device=="cpu":
                 part_info['gt_saliency_map'] = integrals[counter].numpy().astype(np.single).tolist()
@@ -282,21 +286,23 @@ class CocoDataset():
 
         for i, ann in enumerate(ann_info):
             if ann.get('ignore', False):
+                #write_integral.append(False)
                 continue
             x1, y1, w, h = ann['bbox']
             if ann['area'] <= 0 or w < 1 or h < 1:
+                #write_integral.append(False)
                 continue
             bbox = [x1, y1, x1 + w - 1, y1 + h - 1]
             if ann.get('iscrowd', False):
                 gt_bboxes_ignore.append(bbox)
-                gt_labels.append(self.cat2label[ann['category_id']])
-                gt_bboxes.append(bbox)
-                write_integral.append(False)
+                #gt_labels.append(self.cat2label[ann['category_id']])
+                #gt_bboxes.append(bbox)
+                #write_integral.append(False)
             else:
                 gt_bboxes.append(bbox)
                 gt_labels.append(self.cat2label[ann['category_id']])
                 gt_masks_ann.append(ann['segmentation'])
-                write_integral.append(True)
+                #write_integral.append(True)
 
         if gt_bboxes:
             gt_bboxes = np.array(gt_bboxes, dtype=np.float32)
