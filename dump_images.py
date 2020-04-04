@@ -3,20 +3,18 @@
 # Written by Suraj Srinivas <suraj.srinivas@idiap.ch>
 #
 
-""" Compute saliency maps of images from dataset folder 
+""" Compute saliency maps of images from dataset folder
     and dump them in a results folder """
 
 import torch
-import subprocess
-import torch.nn as nn
-import torch.nn.functional as F
-from torchvision import datasets, transforms, utils, models
-import numpy as np
+from torchvision import datasets, transforms, utils
 import os
 
-from fullgrad import FullGrad
-from simple_fullgrad import SimpleFullGrad
-from vgg_imagenet import *
+# Import saliency methods and models
+from saliency.fullgrad import FullGrad
+from saliency.simple_fullgrad import SimpleFullGrad
+from models.vgg import *
+from models.resnet import *
 from misc_functions import *
 import pdb
 from mmcv.parallel import MMDataParallel
@@ -55,11 +53,18 @@ unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
 
 
 #1. Buraya bizim modelin yuklenmesi lazim
-model = init_model(model_path, num_classes, num_gpus)
+#model = init_model(model_path, num_classes, num_gpus)
 #model = models.resnext50_32x4d(pretrained=True)
-pdb.set_trace()
+#pdb.set_trace()
 # Initialize FullGrad object
-fullgrad = FullGrad(model, device)
+#fullgrad = FullGrad(model, device)
+# uncomment to use VGG
+# model = vgg16_bn(pretrained=True)
+model = resnet18(pretrained=True)
+model = model.to(device)
+
+# Initialize FullGrad objects
+fullgrad = FullGrad(model)
 simple_fullgrad = SimpleFullGrad(model)
 
 #2. Buraya imagein gt classinin etiketi verilmeli
@@ -78,7 +83,7 @@ def compute_saliency_and_save():
 
         # Save saliency maps
         for i in range(data.size(0)):
-            filename = save_path + str( (batch_idx+1) * (i+1)) + str( target_class.numpy())
+            filename = save_path + str( (batch_idx+1) * (i+1)) 
             filename_simple = filename + '_simple'
 
             image = unnormalize(data[i,:,:,:].cpu())
@@ -86,18 +91,14 @@ def compute_saliency_and_save():
             save_saliency_map(image, cam_simple[i,:,:,:], filename_simple + '.jpg')
 
 
-#---------------------------------------------------------------------------------#
+if __name__ == "__main__":
+    # Create folder to saliency maps
+    create_folder(save_path)
+    compute_saliency_and_save()
+    print('Saliency maps saved.')
 
-# Create folder to saliency maps
-create_folder(save_path)
 
-compute_saliency_and_save()
 
-print('Saliency maps saved.')
-
-#---------------------------------------------------------------------------------#
-        
-        
 
 
 
