@@ -60,7 +60,7 @@ unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
 #fullgrad = FullGrad(model, device)
 # uncomment to use VGG
 # model = vgg16_bn(pretrained=True)
-model = resnet18(pretrained=True)
+model = resnet101(pretrained=True)
 model = model.to(device)
 
 # Initialize FullGrad objects
