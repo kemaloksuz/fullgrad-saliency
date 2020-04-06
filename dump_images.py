@@ -60,15 +60,15 @@ unnormalize = NormalizeInverse(mean = [0.485, 0.456, 0.406],
 #fullgrad = FullGrad(model, device)
 # uncomment to use VGG
 # model = vgg16_bn(pretrained=True)
-model = resnet101(pretrained=True)
+model = resnet50(pretrained=True)
 model = model.to(device)
 
 # Initialize FullGrad objects
-fullgrad = FullGrad(model)
+#fullgrad = FullGrad(model)
 simple_fullgrad = SimpleFullGrad(model)
 
 #2. Buraya imagein gt classinin etiketi verilmeli
-target_class=torch.tensor([[852]]).to(device)
+target_class=torch.tensor([[367]]).to(device)
 
 save_path = PATH + 'results/'
 
@@ -77,7 +77,7 @@ def compute_saliency_and_save():
         data, target = data.to(device).requires_grad_(), target.to(device)
 
         # Compute saliency maps for the input data
-        cam = fullgrad.saliency(data, target_class = target_class)
+        # cam = fullgrad.saliency(data, target_class = target_class)
         
         cam_simple = simple_fullgrad.saliency(data, target_class = target_class)
 
@@ -87,7 +87,7 @@ def compute_saliency_and_save():
             filename_simple = filename + '_simple'
 
             image = unnormalize(data[i,:,:,:].cpu())
-            save_saliency_map(image, cam[i,:,:,:], filename + '.jpg')
+#            save_saliency_map(image, cam[i,:,:,:], filename + '.jpg')
             save_saliency_map(image, cam_simple[i,:,:,:], filename_simple + '.jpg')
 
 

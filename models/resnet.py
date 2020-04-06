@@ -16,7 +16,7 @@
 import torch
 import torch.nn as nn
 from torch.hub import load_state_dict_from_url
-
+import pdb
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
@@ -269,6 +269,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def _forward(self, x):
+                    
         x = self.conv1(x)
         x = self.bn1(x)
 

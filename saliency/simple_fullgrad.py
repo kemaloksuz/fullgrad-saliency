@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from math import isclose
-
+import pdb
 
 class SimpleFullGrad():
     """
@@ -36,6 +36,7 @@ class SimpleFullGrad():
         """
         Compute intermediate gradients for an image
         """
+        pdb.set_trace()
 
         image = image.requires_grad_()
         out, features = self.model.getFeatures(image)
@@ -82,7 +83,7 @@ class SimpleFullGrad():
         grd = input_grad * image
         gradient = self._postProcess(grd).sum(1, keepdim=True)
         cam = gradient
-
+        pdb.set_trace()
         # Intermediate-gradients
         for i in range(len(intermed_grad)):
             if len(intermed_grad[i].size()) == len(im_size):
